@@ -1,0 +1,165 @@
+######################################
+test_data_row = row_test
+test_data_col = col_test 
+
+###########################
+##Accuracy
+##evaluation method 1: accurarcy 
+#for first_markov model
+success_num = 0
+
+max_index = 0
+max_value = 0
+        
+###
+for i in range(len(test_data_row)):
+    initial_state = (test_data_row[i][0] * num_grid_row) + test_data_col[i][0]
+    temp = [0 for x in range(401)]
+    temp[initial_state] = 1
+    res = np.dot(T_401_400,temp)
+    
+    total = 0
+    for j in range(len(res)):
+        if (max_value < res[j]):
+            max_value = res[j]
+            max_index = j
+
+    if(max_index == 400):
+        max_index = (test_data_row[i][0],test_data_col[i][0])
+    else:
+        if(type(max_index) == int):
+            max_index = (max_index//20,max_index%20)
+    
+    if(max_index[0] == test_data_row[i][-1]) and (max_index[1] == test_data_col[i][-1]):
+        success_num += 1
+success_rate_first_markov =  success_num/len(test_data_row)
+print(success_num)
+print(success_rate_first_markov)
+
+success_num = 0
+
+max_index = 0
+max_value = 0
+total_length = 0
+###
+for i in range(len(test_data_row)):
+    for j in range(len(test_data_row[i])):
+        current_state = (test_data_row[i][j]*num_grid_row+test_data_col[i][j])
+        temp = np.zeros(401)
+        temp[current_state] = 1
+        res = np.dot(T_401_400,temp)
+        
+        total = 0
+        for x in range(len(res)):
+            if(max_value<res[x]):
+                max_value = res[x]
+                max_index = x
+        if(max_index == 400):
+            max_index =  (test_data_row[i][j],test_data_col[i][j])
+        else:
+            if(type(max_index) == int):
+                max_index = (max_index//20, max_index%20)
+            
+            if(max_index[0] == test_data_row[i][-1]) and (max_index[1] == test_data_col[i][-1]):
+                success_num += 1
+                
+        total_length+=1
+success_rate_first_markov =  success_num/total_length
+print(success_num)
+print(success_rate_first_markov)
+
+
+
+##compute the precision at k
+
+total_precision = 0
+
+for i in range(len(test_data_row)):
+    
+    initial_state = (test_data_row[i][0] * num_grid_row) + test_data_col[i][0]
+    temp = [0 for x in range(401)]
+    temp[initial_state] = 1
+    
+    res = np.dot(T_401_400,temp)
+    res[initial_state] += res[400]
+    res = res[:-1]
+    prediction_sorted = [i[0] for i in sorted(enumerate(res), key=lambda x:x[1])]
+    
+    true_label = test_data_row[i][-1]*20+test_data_col[i][-1]
+
+    #if(max_index == 401):
+        #max_index = (test_data_row[i][0],test_data_col[i][0])
+    temp = 0
+    precision_at_k = 0
+    for i in range(k):
+        if(len(prediction_sorted)>5):
+            if(true_label == prediction_sorted[-1-i]):
+                temp+=1
+    precision_at_k += temp/5
+    
+    total_precision += precision_at_k
+
+print('The total Precision-at-k with k = ',k,' is ',total_precision)   
+print('The average of total Precision-at-k with k = ',k,' is ',total_precision/len(test_data_row)) 
+
+
+##compute the average precision at k
+total_precision = 0
+avg_precision_at_k = 0
+total_avg_precision_at_k = 0
+
+for i in range(len(test_data_row)):
+    initial_state = (test_data_row[i][0] * num_grid_row) + test_data_col[i][0]
+    temp = [0 for x in range(401)]
+    temp[initial_state] = 1
+    res = np.dot(T_401_400,temp)
+    res[initial_state] += res[400]
+    res = res[:-1]
+    prediction_sorted = [i[0] for i in sorted(enumerate(res), key=lambda x:x[1])]
+    
+    true_label = test_data_row[i][-1]*20+test_data_col[i][-1]
+    temp = 0
+    #loop through the top k rank of the prediction
+    for n in range(k):
+        if(len(prediction_sorted)>k):
+            if(true_label == prediction_sorted[-1-n]):
+                temp += 1/(n+1)
+    avg_precision_at_k = temp/k
+    #print(avg_precision_at_k)
+    total_avg_precision_at_k += avg_precision_at_k
+
+print('The total avg_Precision-at-k with k = ',k,' is ',total_avg_precision_at_k)    
+print('The average of total avg_Precision-at-k with k = ',k,' is ',total_avg_precision_at_k/len(test_data_row)) 
+
+
+
+from sklearn.metrics import log_loss
+y_true = [0]*400
+y_pred = [0]*400
+for i in range(400):
+    y_pred[i] = [1,0]
+total = 0
+for i in range(len(test_data_row)):
+    #true
+    true_label = test_data_row[i][-1]*20+test_data_col[i][-1]
+    y_true[true_label] = 1
+    #predict
+    initial_state = (test_data_row[i][0] * num_grid_row) + test_data_col[i][0]
+    temp = [0 for x in range(401)]
+    temp[initial_state] = 1
+    res = np.dot(T_401_400,temp)
+    for j in range(len(res)-1):
+        if (j == true_label):
+            temp = res[j]+res[400]
+            y_pred[j] = [1-temp,temp]
+        else:
+            y_pred[j] = [1-res[j],res[j]]
+            
+    total += log_loss(y_true, y_pred)
+    
+    y_true = [0]*400
+    for i in range(400):
+        y_pred[i] = [1,0]
+    
+    
+print('The sum of log_loss for first-order markov model alogrithm is ',total)
