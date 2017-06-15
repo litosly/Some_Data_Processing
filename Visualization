@@ -1,0 +1,89 @@
+def visualize_next_step(test_num):
+    #input which test want to show
+    
+#set figure size
+    plt.figure(figsize=(10,10))
+    
+
+#plot prediction for every point during the trajectory
+    for i in range(len(row_test[test_num])):
+        a = row_test[test_num][i]
+        b = col_test[test_num][i]
+        
+        current_state = (a,b)
+        
+        next_state = first_markov(a,b)
+
+        line_width = np.zeros(9)
+        if(current_state in next_state):
+            line_width[0]+=next_state[current_state]
+        if((a-1,b-1) in next_state):
+            line_width[1]+= next_state[(a-1,b-1)]
+        if((a,b-1) in next_state):
+            line_width[2]+= next_state[(a,b-1)]
+        if((a+1,b-1) in next_state):
+            line_width[3]+= next_state[(a+1,b-1)]
+        if((a-1,b) in next_state):
+            line_width[4]+= next_state[(a-1,b)]
+        if((a+1,b) in next_state):
+            line_width[5]+= next_state[(a+1,b)]
+        if((a-1,b+1) in next_state):
+            line_width[6]+= next_state[(a-1,b+1)]
+        if((a,b+1) in next_state):
+            line_width[7]+= next_state[(a,b+1)]
+        if((a+1,b+1) in next_state):
+            line_width[8]+= next_state[(a+1,b+1)]
+
+
+        for i in range(9):
+            temp = adjacent_point(a,b,i)
+            x_next = temp[0]
+            y_next = temp[1]
+            x = [a,x_next]
+            y = [b,y_next]
+            if(x_next != x and y_next != y):
+                plt.plot(x,y,c='b',linewidth = line_width[i]*100)
+        plt.scatter(a,b,s = line_width[0]*100)
+        
+        
+#plot real trajectory
+    a = row_test[test_num]
+    b = col_test[test_num]
+    plt.plot(a,b,c='r',linewidth = 1)
+    
+
+    
+#plot predicted end-point
+    row_start_point = row_test[test_num][0]
+    col_start_point = col_test[test_num][0]
+    initial_state = row_start_point*20 + col_start_point
+    temp = np.zeros(401)
+    temp[initial_state] = 1
+    res = np.dot(T_401_400,temp)
+    
+    max_value = 0
+    for j in range(len(res)):
+        if (max_value < res[j]):
+            max_value = res[j]
+            max_index = j
+    
+    if(max_index == 400):
+        predicted_end_row = row_start_point
+        predicted_end_col = col_start_point
+    else:
+        predicted_end_row = max_index//20
+        predicted_end_col = max_index%20
+        
+    plt.scatter(predicted_end_row,predicted_end_col,s = 500,color = 'green')
+    
+#plot real end point
+    plt.scatter(a[-1],b[-1],color = 'black',s = 500)
+#sbet boundary
+    axes = plt.gca()
+    axes.set_xlim([0,20])
+    axes.set_ylim([0,20])
+    
+    
+    plt.title('Black = real end point, Green = predicted end point',loc = 'left')
+    plt.show()
+    
